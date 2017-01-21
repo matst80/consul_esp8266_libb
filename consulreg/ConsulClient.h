@@ -15,7 +15,7 @@ public:
     void setTags(const String tags[], const int len);
     String join(const String strs[], const int len);
     String getMQTTBase();
-    String getValue(string key);
+    String getValue(String key);
 private:
   String _serverAddress = "127.0.0.1:8500";
   String _tags = "[\"esp\",\"iot\"]";

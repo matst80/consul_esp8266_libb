@@ -43,20 +43,15 @@ String ESPConsulClient::getMQTTBase()
     return getValue("mqttname");
 }
 
-String ESPConsulClient::getValue(string key)
+String ESPConsulClient::getValue(String key)
 {
     HTTPClient http;
     http.begin("http://"+_serverAddress+"/v1/kv/"+key); //HTTP
     
     int httpCode = http.sendRequest("GET", "");
-    String ret = "";
-    while (client.available()) {
-        ret+=client.read();
-    }
+    String ret = http.getString();
     
-
-    delay(100);
-    }
+    
     http.end();
     
     return ret;
