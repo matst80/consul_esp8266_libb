@@ -50,7 +50,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     msg[i] = payload[i];
   }
   Serial.println();
-  if (strcmp(topic,strcat(serviceId,"/update"))!=0)
+  if (strcmp(topic,getPath("update"))==0)
   {
     doupdate(msg);
   }
@@ -60,17 +60,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
+    Serial.print("MQTT connecting...");
     // Attempt to connect
     if (client.connect(consulId)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      //Serial.println(strcat(serviceId,"/status"));
-      client.publish(strcat(serviceId,"/status"), "connected");
+      //Serial.println(getPath("status"));
+      client.publish(getPath("status"), "connected");
       // ... and resubscribe
       //client.subscribe("testskit");
-      client.subscribe(strcat(serviceId,"/update"));
-      client.subscribe(strcat(serviceId,"/reboot"));
+      client.subscribe(getPath("update"));
+      client.subscribe(getPath("reboot"));
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -81,19 +81,28 @@ void reconnect() {
   }
 }
 
+char* buildPath()
+{
+  char path[512];
+  sprintf(path,"/firmware/%s.bin",consulId);
+  return path;
+}
+
 void doupdate(char* url) {
-        Serial.println("Updating firmware...");
-        char* mqttPath = strcat(serviceId,"/updatestatus");
+        Serial.print("Updating firmware... ");
+        char* mqttPath = getPath("updatestatus");
         client.publish(mqttPath, "Updating");
-        t_httpUpdate_return ret = ESPhttpUpdate.update(url,updatePort,strcat(strcat("/firmware/",serviceId),".bin"));
-        client.publish(mqttPath, "Updated");
-        Serial.println("Registerd, updated!");
+        Serial.println(buildPath());
+        t_httpUpdate_return ret = ESPhttpUpdate.update(url,updatePort,buildPath());
+        
         switch(ret) {
             case HTTP_UPDATE_FAILED:
+                client.publish(mqttPath, "Update failed");
                 Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
                 break;
 
             case HTTP_UPDATE_NO_UPDATES:
+                client.publish(mqttPath, "No updated");
                 Serial.println("HTTP_UPDATE_NO_UPDATES");
                 break;
 
@@ -103,13 +112,19 @@ void doupdate(char* url) {
         }
 }
 
+char* getPath(char* func) {
+  char ret[128];
+  sprintf(ret,"%s/%s",serviceId,func);
+  return ret;
+}
+
 void loop() {
     //Serial.println("New!!!!");
     // wait for WiFi connection
     if(WiFi.status() == WL_CONNECTED) {
         if (!registerd)
         {
-          cclient.registerService(consulId, serviceName);
+          //cclient.registerService(consulId, serviceName);
           registerd = true;
         }
         
@@ -117,14 +132,14 @@ void loop() {
         if (!client.connected()) {
           reconnect();
           Serial.println("reconnect...");
-          //client.publish(strcat(serviceId,"/status"), "Reconnected");
+          //client.publish(getPath("status"), "Reconnected");
         }
         
         long now = millis();
         if (now - lastMsg > 2000) {
          lastMsg = now;
-         client.publish(strcat(serviceId,"/ping"), "pong");
-         Serial.println("pinging");
+         client.publish(getPath("ping"), "pong");
+         Serial.println(getPath("ping"));
         }
         client.loop();
         //cclient.getMQTTName
